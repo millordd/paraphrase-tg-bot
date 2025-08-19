@@ -1,0 +1,20 @@
+{
+  "name": "paraphrase-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "Ardasher Bobokalonov",
+  "type": "module",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "dotenv": "^17.2.1",
+    "grammy": "^1.38.1",
+    "openai": "^5.12.2"
+  }
+}
