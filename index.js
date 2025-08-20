@@ -13,7 +13,7 @@ const bot = new Bot(TG_TOKEN);
 // ===== Системный промпт =====
 const systemPrompt = [
   'You are a professional paraphraser.',
-  'Task: rewrite the user text in the SAME language (Russian or English).',
+  'Task: rewrite the user text in the SAME language (Russian or English or Tajik).',
   'Keep the meaning and facts unchanged.',
   'Improve grammar and clarity; keep roughly similar length.',
   'Preserve names, numbers, links, hashtags, emojis.',
@@ -35,6 +35,15 @@ function chunkText(text, max = 4000) {
   if (rest) chunks.push(rest);
   return chunks;
 }
+
+// ===== Определение команд для меню =====
+const commands = [
+  { command: 'start', description: 'Приветствие и информация о боте' },
+  { command: 'help', description: 'Список всех команд' },
+  { command: 'paraphrase', description: 'Перефразировать текст' },
+  { command: 'contact', description: 'Связаться с владельцем' },
+  { command: 'about', description: 'О боте' },
+];
 
 // ===== Команды бота =====
 bot.command('start', (ctx) => {
@@ -120,4 +129,6 @@ bot.on('message:text', async (ctx) => {
 
 // ===== Запуск бота =====
 bot.start();
+// Отправляем команды в Telegram Bot API
+bot.api.setMyCommands(commands);
 console.log("Bot started in long polling mode");
