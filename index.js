@@ -1,4 +1,3 @@
-// index.js
 import 'dotenv/config';
 import { Bot } from 'grammy';
 import fetch from 'node-fetch';
@@ -72,8 +71,6 @@ bot.on('message:text', async (ctx) => {
   const text = ctx.message?.reply_to_message?.text ?? ctx.message.text;
 
   try {
-    const combinedPrompt = systemPrompt + "\n\n" + text;
-
     const resAI = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
       {
@@ -83,7 +80,20 @@ bot.on('message:text', async (ctx) => {
           'X-goog-api-key': GEMINI_API_KEY,
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: combinedPrompt }] }]
+          contents: [
+            {
+              "role": "user",
+              "parts": [{ "text": systemPrompt }]
+            },
+            {
+              "role": "model",
+              "parts": [{ "text": "OK." }]
+            },
+            {
+              "role": "user",
+              "parts": [{ "text": text }]
+            }
+          ]
         })
       }
     );
