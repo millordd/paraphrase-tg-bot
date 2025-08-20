@@ -4,7 +4,6 @@ import 'dotenv/config';
 import { Bot } from 'grammy';
 import fetch from 'node-fetch';
 
-// Проверка переменных
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const PORT = process.env.PORT || 3000;
@@ -14,7 +13,7 @@ if (!GEMINI_API_KEY) throw new Error('Missing GEMINI_API_KEY');
 
 const bot = new Bot(TG_TOKEN);
 
-// Системный промпт
+// ===== Системный промпт =====
 const systemPrompt = [
   'You are a professional paraphraser.',
   'Task: rewrite the user text in the SAME language (Russian or English).',
@@ -26,7 +25,7 @@ const systemPrompt = [
   'Return ONLY the rewritten text, no explanations.'
 ].join(' ');
 
-// Функция разбиения текста
+// ===== Разбиение текста =====
 function chunkText(text, max = 4000) {
   const chunks = [];
   let rest = text;
@@ -40,17 +39,7 @@ function chunkText(text, max = 4000) {
   return chunks;
 }
 
-// Express сервер
-const app = express();
-app.use(express.json());
-
-// Webhook endpoint
-app.post(`/webhook/${TG_TOKEN}`, async (req, res) => {
-  await bot.handleUpdate(req.body);
-  res.sendStatus(200);
-});
-
-// Логика перефразирования
+// ===== Логика перефразирования =====
 bot.on('message:text', async (ctx) => {
   const text = ctx.message?.reply_to_message?.text ?? ctx.message.text;
 
@@ -66,16 +55,19 @@ bot.on('message:text', async (ctx) => {
           'X-goog-api-key': GEMINI_API_KEY,
         },
         body: JSON.stringify({
-          contents: [
-            { parts: [{ text: combinedPrompt }] }
-          ]
+          contents: [{ parts: [{ text: combinedPrompt }] }]
         })
       }
     );
 
     const data = await resAI.json();
-    const answer = data?.candidates?.[0]?.content?.[0]?.text?.trim();
-    if (!answer) return ctx.reply('Не удалось получить ответ от модели.');
+    console.log("Gemini response:", JSON.stringify(data, null, 2));
+
+    const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+    if (!answer) {
+      return ctx.reply('Не удалось получить ответ от модели.');
+    }
 
     for (const part of chunkText(answer)) {
       await ctx.reply(part);
@@ -83,16 +75,34 @@ bot.on('message:text', async (ctx) => {
 
   } catch (err) {
     console.error('Error:', err);
-    await ctx.reply('Ошибка при перефразировании.');
+    try {
+      await ctx.reply('Ошибка при перефразировании.');
+    } catch (e) {
+      console.error("Failed to reply:", e);
+    }
   }
 });
 
-// Устанавливаем webhook для Telegram
-(async () => {
-  const url = `https://${process.env.RENDER_EXTERNAL_HOSTNAME}/webhook/${TG_TOKEN}`;
-  await bot.api.setWebhook(url);
-  console.log(`Webhook set to ${url}`);
-})();
+// ===== Запуск: локально polling, на Render webhook =====
+const app = express();
+app.use(express.json());
 
-// Запуск сервера
-app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+app.post(`/webhook/${TG_TOKEN}`, async (req, res) => {
+  await bot.handleUpdate(req.body);
+  res.sendStatus(200);
+});
+
+if (process.env.RENDER_EXTERNAL_HOSTNAME) {
+  // Webhook mode
+  (async () => {
+    const url = `https://${process.env.RENDER_EXTERNAL_HOSTNAME}/webhook/${TG_TOKEN}`;
+    await bot.api.setWebhook(url);
+    console.log(`Webhook set to ${url}`);
+  })();
+
+  app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+} else {
+  // Local dev mode
+  bot.start();
+  console.log("Bot started in long polling mode");
+}
