@@ -1,12 +1,10 @@
 // index.js
-import express from 'express';
 import 'dotenv/config';
 import { Bot } from 'grammy';
 import fetch from 'node-fetch';
 
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const PORT = process.env.PORT || 3000;
 
 if (!TG_TOKEN) throw new Error('Missing TELEGRAM_BOT_TOKEN');
 if (!GEMINI_API_KEY) throw new Error('Missing GEMINI_API_KEY');
@@ -75,34 +73,10 @@ bot.on('message:text', async (ctx) => {
 
   } catch (err) {
     console.error('Error:', err);
-    try {
-      await ctx.reply('Ошибка при перефразировании.');
-    } catch (e) {
-      console.error("Failed to reply:", e);
-    }
+    await ctx.reply('Ошибка при перефразировании.');
   }
 });
 
-// ===== Запуск: локально polling, на Render webhook =====
-const app = express();
-app.use(express.json());
-
-app.post(`/webhook/${TG_TOKEN}`, async (req, res) => {
-  await bot.handleUpdate(req.body);
-  res.sendStatus(200);
-});
-
-if (process.env.RENDER_EXTERNAL_HOSTNAME) {
-  // Webhook mode
-  (async () => {
-    const url = `https://${process.env.RENDER_EXTERNAL_HOSTNAME}/webhook/${TG_TOKEN}`;
-    await bot.api.setWebhook(url);
-    console.log(`Webhook set to ${url}`);
-  })();
-
-  app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
-} else {
-  // Local dev mode
-  bot.start();
-  console.log("Bot started in long polling mode");
-}
+// ===== Запуск =====
+bot.start();
+console.log("Bot started in long polling mode");
